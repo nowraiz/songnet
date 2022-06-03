@@ -18,6 +18,11 @@ def parse_data(filename):
     songs = {}
     raw_features = []
     names = []
+    artists = [
+        "Marshmello",
+        "Alan Walker",
+        "Sasha Alex Sloan"
+    ]
     y = []
     with open(filename) as f:
         songs = json.load(f)
@@ -27,6 +32,11 @@ def parse_data(filename):
         track_id = track["id"]
         if track_id in unique_tracks:
             continue
+        artist = track["artist"]
+
+        # print(artist)
+        # if artist not in artists:
+            # continue
         unique_tracks.add(track_id)
         feature_vec = spotify.get_feature_vector(feature_dict)
         if feature_vec is not None:
@@ -108,25 +118,25 @@ def main():
     y.extend(_y)
     names.extend(n)
     unique = len(set(y))
-    create_playlist(features, names, 'Arcade')
+    # create_playlist(features, names, 'Arcade')
     embedded = TSNE().fit_transform(features)
 
     # print(embedded)
 
-    # embedded_x = [x[0] for x in embedded]
-    # embedded_y = [x[1] for x in embedded]
+    embedded_x = [x[0] for x in embedded]
+    embedded_y = [x[1] for x in embedded]
     
-    # plt.figure(figsize=(16,10))
-    # plot = sns.scatterplot(
-    # x=embedded_x, y=embedded_y,
-    # hue=y,
-    # palette=sns.color_palette("Paired", unique),
-    # legend="full",
-    # alpha=0.9
-    # )
+    plt.figure(figsize=(16,10))
+    plot = sns.scatterplot(
+    x=embedded_x, y=embedded_y,
+    hue=y,
+    palette=sns.color_palette("Paired", unique),
+    legend="full",
+    alpha=0.9
+    )
 
-    # fig = plot.get_figure()
-    # fig.savefig("tsne.png")
+    fig = plot.get_figure()
+    fig.savefig("tsne.png")
 
 
 if __name__ == "__main__":

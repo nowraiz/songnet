@@ -11,25 +11,36 @@ class SpotifyFeatures:
     """
 
     def __init__(self) -> None:
-        self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id="39c5275d30d044d68b705ab372f3ed5f", 
-        client_secret="d825c7a8eb5e4938804d1b3c1f2e4be3"))
+        with open("client_secret") as f:
+            secret = f.read()
+        # self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id="39c5275d30d044d68b705ab372f3ed5f", 
+        # client_secret=secret))
+        
+        self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id="fdec5e645eed408f887f95c9d0deb51d", 
+        client_secret=secret, requests_timeout=5), retries=1)
+        # self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id="39c5275d30d044d68b705ab372f3ed5f"))
         
 
     def get_track_features(self, name):
         """
-        Returns the features object of the given track name by returning the first search result
+        Returns the metadata and features object of the given track name by returning the features of the first 
+        search result
         """
-        track_id = self.get_id(name)
+        track_id, duration = self.get_id_and_duration(name)
         if track_id is None:
-            return None, None
+            return None, None, None
         
         features = self.sp.audio_features(track_id)
         if len(features) < 1:
-            return None, None
+            return None, None, None
         
         features = features[0]
-        filtered = { key: features[key] for key in FEATURES }
-        return track_id, filtered
+        # for some reason, the track features for some tracks is None. 
+        if features is None:
+            return None, None, None
+        filtered = {key: features[key] for key in FEATURES}
+        metadata = {'duration': duration}
+        return track_id, metadata, filtered
 
     
     def get_feature_vector(self, feature_dict):
@@ -49,24 +60,24 @@ class SpotifyFeatures:
         """
         Attempts to search for a given track name and returns the result from spotify
         """
-        result = self.sp.search(name, limit=1, market="US")
+        result = self.sp.search(name, limit=1)
         return result
 
-    def get_id(self, name):
+    def get_id_and_duration(self, name):
         """
         Attempts to get the spotify id for a given track by returning the id of the first search result
-        for the given track
+        for the given track. Also return the duration of the track in (ms) if found
         """
         result = self.search(name)
         if "tracks" not in result:
-            return None
+            return None, None
         tracks = result["tracks"]
         if "items" not in tracks:
-            return None
+            return None, None
         items = tracks["items"]
         if len(items) < 1:
-            return None
+            return None, None
         item = items[0]
         if "id" not in item:
-            return None
-        return item["id"]
+            return None, None
+        return item["id"], item["duration_ms"]
