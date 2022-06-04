@@ -12,9 +12,10 @@ that can generate personalized playlist(s) given initial few songs based on my l
 
 ## Limitations
 
-Currently, this network uses two things from Spotify
-    *   Song Features (Easy to get using Spotify API)
-    *   Spoitfy Streaming History (Not possible to get using Spotify API)
+Currently, this project uses two things from Spotify:
+
+*   Song Features (Easy to get using Spotify API)
+*   Spoitfy Streaming History (Not possible to get using Spotify API)
 
 The only way to get your streaming history is by requesting Spotify your personal data and they process it and send
 it back to you after a few days. Since it is currently not possible to extract this streaming history from the API,
