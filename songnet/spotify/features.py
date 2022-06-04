@@ -16,9 +16,8 @@ class SpotifyFeatures:
         # self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id="39c5275d30d044d68b705ab372f3ed5f", 
         # client_secret=secret))
         
-        self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id="fdec5e645eed408f887f95c9d0deb51d", 
-        client_secret=secret, requests_timeout=5), retries=1)
-        # self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id="39c5275d30d044d68b705ab372f3ed5f"))
+        self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id="39c5275d30d044d68b705ab372f3ed5f", client_secret=
+        "fdfa2b7e996a4003823525286e3f47e3"))
         
 
     def get_track_features(self, name):

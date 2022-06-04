@@ -164,4 +164,4 @@ cython_debug/
 client_secret
 
 # music data
-data
+/data
