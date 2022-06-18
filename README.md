@@ -47,9 +47,9 @@ In the following playlist, the model is seeded by the first three songs (indicat
 ### EDM/Pop 
 | Title | Artist |
 | ----- | ------ |
-| **Faded** | **Alan Walker** |
-| **Fearless Pt. II** | **Lost Sky** |
-| **Don't You Worry Child** | **Swedish House Mafia** |
+| ***Faded*** | ***Alan Walker*** |
+| ***Fearless Pt. II*** | ***Lost Sky*** |
+| ***Don't You Worry Child*** | ***Swedish House Mafia*** |
 | Manchala | Vishal-Shekhar |
 | Infectious | Tobu |
 | Tera Ban Jaunga | Akhil Sachdeva |
@@ -71,9 +71,9 @@ In the following playlist, the model is seeded by the first three songs (indicat
 ### Sad/Lowkey
 | Title | Artist |
 | ----- | ------ |
-| **Beete Lamhein** | **KK** |
-| **Main Hoon Na(Sad)** | **Abhijeet** |
-| **Ae Dil Hai Mushkil Title Track** | **Pritam** |
+| ***Beete Lamhein*** | ***KK*** |
+| ***Main Hoon Na(Sad)*** | ***Abhijeet*** |
+| ***Ae Dil Hai Mushkil Title Track*** | ***Pritam*** |
 | Tere Liye - Hip Hop Mix | Sachin Gupta |
 | this is me trying | Taylor Swift |
 | Tere Liye - Hip Hop Mix | Sachin Gupta |
