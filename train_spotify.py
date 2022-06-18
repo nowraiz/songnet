@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
+from torch.distributions.categorical import Categorical
 from torch.nn.utils.rnn import pack_sequence
 from torch.utils.data import BatchSampler, RandomSampler
 from songnet.data.loader import SpotifyDataLoader
@@ -18,7 +19,7 @@ def sample(src, target):
     for idx in BatchSampler(RandomSampler(range(len(src))), BATCH_SIZE, False):
         yield [src[i] for i in idx], [target[i] for i in idx]
 
-def create_data_set(sequences, index_map, expand_sequences=True):
+def create_data_set(sequences, index_map, library_size, expand_sequences=True):
     """
     Given a list of sequences from the SpotifyDataLoader, create a data set for training and testing as X and Y
     """
@@ -41,9 +42,9 @@ def create_data_set(sequences, index_map, expand_sequences=True):
             X.append(x)
             Y.append(y)
 
-    return convert_data_set_to_tensor(X, Y, index_map)
+    return convert_data_set_to_tensor(X, Y, index_map, library_size)
 
-def convert_data_set_to_tensor(X, Y, index_map):
+def convert_data_set_to_tensor(X, Y, index_map, library_size):
     """
     Given a set of records X and Y, convert it to a list of tensors data_x, and list of tensors data_y
     """
@@ -51,46 +52,54 @@ def convert_data_set_to_tensor(X, Y, index_map):
     data_y = []
     assert len(X) == len(Y)
     for x, y in zip(X, Y):
-        x = [convert_record_to_tensor(i) for i in x]
+        x = [convert_record_to_tensor(i, index_map, library_size) for i in x]
+        # x = [(torch.tensor(i[0], device=DEVICE, dtype=torch.long), i[1]) for i in x]
+        # x = [torch.cat((F.one_hot(i[0], num_classes=library_size), i[1])) for i in x]
         x = torch.stack(x)
-        y = convert_record_to_tensor(y)
-        # y = convert_id_to_idx(y, index_map)
-        # y = torch.tensor(y, device=DEVICE)
+        # convert to ids
+        # x = F.one_hot(x, num_classes=library_size).float()
+        # x = [torch.tensor(i, device=DEVICE) for i in x]
+        # x = [convert_record_to_tensor(i) for i in x]
+        # y = convert_record_to_tensor(y)
+        y = convert_id_to_idx(y, index_map)
+        y = torch.tensor(y, device=DEVICE)
         data_x.append(x)
         data_y.append(y)
     return data_x, data_y
 
-def convert_record_to_tensor(record):
+def convert_record_to_tensor(record, index_map, library_size):
     """
     Converts a loaded record with relevant spotify metadata to a tensor describing features
     """
     features = record["features"]
     feature_vector = [features[feature] for feature in RELEVANT_FEATURES]
-    return torch.tensor(feature_vector, dtype=torch.float32, device=DEVICE)
+    idx = torch.tensor(convert_id_to_idx(record, index_map), dtype=torch.long, device=DEVICE)
+    return torch.cat((torch.tensor(feature_vector, dtype=torch.float32, device=DEVICE), F.one_hot(idx, num_classes=library_size)))
 
 def convert_id_to_idx(record, index_map):
     return index_map[record["id"]]
 
 
-def generate_recommendation(starting_songs, model, data_loader, limit=20):
+def generate_recommendation(songs, starting_songs, model, data_loader, limit=20):
     """
     Generate recomendations based on the predictions of the model seeding from the starting song
     """
-    songs = []
     # bootstrap
     hidden = None
     initial_songs = torch.stack(starting_songs)
     model.eval()
     with torch.no_grad():
         output, hidden = model(initial_songs.unsqueeze(0), hidden)
-        # songs.append(data_loader.get_closest_song(output))
-    # generate new songs
-    print(output)
-    # output = output[:, -1]
-    song = data_loader.get_closest_song(output.squeeze())
+    probs = F.softmax(output.squeeze(), 0)
+    dist = Categorical(probs=probs)
+    idx = dist.sample()
+
+    song = data_loader.get_song_by_idx(idx.item())
+    # song = data_loader.get_closest_song(output.squeeze())
+    # songs.append(" - ".join([song["track"], song["artist"]]))
     songs.append(song)
     # output = output.unsqueeze(0)
-    output = convert_record_to_tensor(song).unsqueeze(0).unsqueeze(0)
+    output = convert_record_to_tensor(song, data_loader.get_index_map(), data_loader.get_unique_songs()).unsqueeze(0).unsqueeze(0)
     # print(hidden)
     h, c = hidden
     h = h[:,-1].unsqueeze(0)
@@ -99,29 +108,33 @@ def generate_recommendation(starting_songs, model, data_loader, limit=20):
     while len(songs) < limit:
         with torch.no_grad():
             output, hidden = model(output, hidden)
-            song = data_loader.get_closest_song(output.squeeze())
+            probs = F.softmax(output.squeeze(), 0)
+            dist = Categorical(probs=probs)
+            idx = dist.sample()
+            song = data_loader.get_song_by_idx(idx.item())
             songs.append(song)
-            output = convert_record_to_tensor(song).unsqueeze(0).unsqueeze(0)
+            # songs.append(" - ".join([song["track"], song["artist"]]))
+            output = convert_record_to_tensor(song, data_loader.get_index_map(), data_loader.get_unique_songs()).unsqueeze(0).unsqueeze(0)
             # output = output.unsqueeze(0)
-
-            # print(songs)
         
     return songs
 
 
 def initial_songs(data_loader):
     # for now bootstrap based on id
-    ids = ["0zQa7QXLpUZfrrsWbgDZll", "4xS7MhQnMv8ailfTUM347g", "1UWacd8x8tPPwmrPB1MoBI"]
+    ids = ["698ItKASDavgwZ3WjaWjtz", "4y1nvncvBhdoelqPMyXxis", "2V65y3PX4DkRhy1djlxd9p"]
     songs = []
+    song_vectors = []
     for id in ids:
         song = data_loader.get_song_by_id(id)
-        song_vector = convert_record_to_tensor(song)
-        songs.append(song_vector)
+        song_vector = convert_record_to_tensor(song, data_loader.get_index_map(), data_loader.get_unique_songs())
+        songs.append(song)
+        song_vectors.append(song_vector)
     
-    return songs
+    return songs, song_vectors
 
 def train(loader, epochs):
-    data_x, data_y = create_data_set(loader.get_sequences(), loader.get_index_map())
+    data_x, data_y = create_data_set(loader.get_sequences(), loader.get_index_map(), loader.get_unique_songs())
     print(len(data_x))
     ratio = int(len(data_x) * 0.95)
     idx = list(RandomSampler(range(len(data_x))))
@@ -132,10 +145,10 @@ def train(loader, epochs):
     model = LSTMSequenceModel(len(RELEVANT_FEATURES), loader.get_unique_songs())
     model.to(DEVICE)
     optimizer = optim.Adam(model.parameters())
-    # criterion = nn.CrossEntropyLoss()
-    criterion = nn.MSELoss()
+    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.MSELoss()
 
-    for epoch in range(40):
+    for epoch in range(epochs):
         avg_loss = 0
         it = 0
         for batch_x, batch_y in sample(train_x, train_y):
@@ -160,11 +173,16 @@ def train(loader, epochs):
     packed_sequence = pack_sequence(test_x, False)
     return model
 
+def dump_generated_playlist(songs):
+    for song in songs:
+        print(f'| {song["track"]} | {song["artist"]} |')
+
 def main():
     loader = SpotifyDataLoader(DATA_FILE, filter_skipped=True)
-    model = train(loader, 40)
-    starting_songs = initial_songs(loader)
-    pprint.pprint(generate_recommendation(starting_songs, model, loader))
+    model = train(loader, 11)
+    songs, starting_songs = initial_songs(loader)
+    generated = generate_recommendation(songs, starting_songs, model, loader)
+    dump_generated_playlist(generated)
 
 if __name__ == "__main__":
     main()

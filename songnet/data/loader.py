@@ -28,6 +28,7 @@ class SpotifyDataLoader:
         self.min_played = min_played
         self.song_map = {}
         self.index_map = {}
+        self.reverse_index_map = {}
         self.min_dict = {}
         self.max_dict = {}
         self.normalize = normalize
@@ -57,6 +58,13 @@ class SpotifyDataLoader:
         Returns the json record for the song with the given id
         """
         return self.song_map.get(id)
+
+    def get_song_by_idx(self, idx):
+        """
+        Returns the json record for the song with the given unique index
+        """
+        id_ = self.reverse_index_map[idx]
+        return self.get_song_by_id(id_)
 
     def get_song(self, id):
         """
@@ -209,6 +217,7 @@ class SpotifyDataLoader:
         """
         for id in self.song_map:
             self.index_map[id] = idx
+            self.reverse_index_map[idx] = id
             idx += 1
 
     def _load_data(self):

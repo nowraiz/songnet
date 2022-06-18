@@ -9,8 +9,8 @@ class LSTMSequenceModel(nn.Module):
     def __init__(self, num_features, song_library_size):
         super().__init__()
         self.num_features = num_features
-        self.lstm = nn.LSTM(input_size=num_features, hidden_size=8, batch_first=True)
-        self.decoder = nn.Linear(8, num_features)
+        self.lstm = nn.LSTM(input_size=song_library_size+num_features, hidden_size=128, batch_first=True)
+        self.decoder = nn.Linear(128, song_library_size)
 
 
     def forward(self, input, hidden=None):
@@ -24,7 +24,6 @@ class LSTMSequenceModel(nn.Module):
         if isinstance(output, PackedSequence):
             output, _ = pad_packed_sequence(output, batch_first=True)
         output = output[:, -1, :]
-        output = F.dropout(output)
         output = self.decoder(output)
         return output, hidden
 
